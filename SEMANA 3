@@ -1,0 +1,102 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Computadoras y laptop eficientes para crear paginas web</title>
+</head>
+<body>
+
+    <header>
+        <h1>Computadoras y laptops </h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#inicio">Inicio</a></li>
+            <li><a href="#quienes-somos">Quiénes Somos</a></li>
+            <li><a href="#servicios">Servicios o Productos</a></li>
+            <li><a href="#contacto">Contacto</a></li>
+        </ul>
+    </nav>
+
+    <main>
+
+        <section id="inicio">
+            <h2>Inicio</h2>
+            <p>
+                Bienvenido a nuestro emprendimiento tecnológico. Nos dedicamos al desarrollo
+                de soluciones digitales innovadoras para personas y empresas que buscan
+                mejorar sus procesos mediante el uso de la tecnología.
+            </p>
+        </section>
+
+        <section id="quienes-somos">
+            <h2>Quiénes Somos</h2>
+
+            <article>
+                <p>
+                   Las laptops y las computadoras son instrumentos tecnológicos esenciales hoy en día, 
+                   empleados en áreas como la comunicación, el trabajo el ocio y la educación.
+                   Estos aparatos facilitan el acceso a recursos digitales, la ejecución de programas 
+                   y el procesamiento de información con rapidez y eficacia.
+                </p>
+
+                <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3"
+                     alt="Tecnología y desarrollo web"
+                     width="400">
+            </article>
+        </section>
+
+        <section id="servicios">
+            <h2>Servicios o Productos</h2>
+
+            <ul>
+                <li>Diseño y desarrollo de páginas web.</li>
+                <li>Creación de aplicaciones móviles.</li>
+                <li>Mantenimiento de sistemas informáticos.</li>
+                <li>Consultoría tecnológica.</li>
+                <li>Marketing digital.</li>
+            </ul>
+        </section>
+
+        <section id="contacto">
+            <h2>Contacto</h2>
+
+            <p>Correo electrónico: contacto@mitecnologia.com</p>
+            <p>Teléfono: +593 99 123 4567</p>
+            <p>Dirección: Quito, Ecuador</p>
+
+            <p>
+                Redes sociales:
+                <a href="https://www.facebook.com" target="_blank">Facebook</a> |
+                <a href="https://www.instagram.com" target="_blank">Instagram</a> |
+                <a href="https://www.youtube.com" target="_blank">YouTube</a>
+            </p>
+
+            <h3>Video relacionado</h3>
+
+            <iframe width="560" height="315"
+                src="https://www.youtube.com/embed/Ke90Tje7VS0"
+                title="Video de tecnología"
+                allowfullscreen>
+            </iframe>
+        </section>
+
+    </main>
+
+    <aside>
+        <h3>Información Adicional</h3>
+        <p>Promoción especial: 20% de descuento en desarrollo web durante este mes.</p>
+        <p>Horario de atención: Lunes a Viernes de 13:00 a 18:00.</p>
+    </aside>
+
+    <footer>
+        <p>Estudiante: Jack Peñaloza</p>
+        <p>Asignatura: DESARROLLO DE APLICACIONES WEB (D)</p>
+        <p>Año: 2026</p>
+    </footer>
+
+</body>
+</html>
+```
