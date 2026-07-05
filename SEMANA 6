@@ -1,0 +1,273 @@
+<section class="container my-5">
+
+    <h2 class="text-center mb-4">
+        Registro de Productos
+    </h2>
+
+    <form id="formulario">
+
+        <div class="mb-3">
+
+            <label class="form-label">Nombre</label>
+
+            <input
+            type="text"
+            id="nombre"
+            class="form-control">
+
+            <small
+            id="errorNombre"
+            class="text-danger">
+            </small>
+
+        </div>
+
+        <div class="mb-3">
+
+            <label class="form-label">
+                Descripción
+            </label>
+
+            <textarea
+            id="descripcion"
+            class="form-control">
+            </textarea>
+
+            <small
+            id="errorDescripcion"
+            class="text-danger">
+            </small>
+
+        </div>
+
+        <div class="mb-3">
+
+            <label class="form-label">
+                Categoría
+            </label>
+
+            <select
+            id="categoria"
+            class="form-select">
+
+                <option value="">
+                    Seleccione
+                </option>
+
+                <option>Laptop</option>
+
+                <option>Computadora</option>
+
+                <option>Accesorio</option>
+
+            </select>
+
+            <small
+            id="errorCategoria"
+            class="text-danger">
+            </small>
+
+        </div>
+
+        <button
+        class="btn btn-primary"
+        type="submit">
+
+            Registrar
+
+        </button>
+
+    </form>
+
+    <div id="mensajeGeneral" class="mt-4"></div>
+
+    <h4 class="mt-4">
+
+        Total de registros:
+        <span id="total">0</span>
+
+    </h4>
+
+    <div id="lista"></div>
+
+</section>
+
+<script src="script.js"></script>
+
+
+
+body{
+    background:#f5f5f5;
+}
+
+.card{
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+
+small{
+    display:block;
+    margin-top:5px;
+}
+
+.is-valid{
+    border:2px solid green;
+}
+
+.is-invalid{
+    border:2px solid red;
+}
+
+const formulario=document.getElementById("formulario");
+
+const nombre=document.getElementById("nombre");
+
+const descripcion=document.getElementById("descripcion");
+
+const categoria=document.getElementById("categoria");
+
+const lista=document.getElementById("lista");
+
+const total=document.getElementById("total");
+
+const mensaje=document.getElementById("mensajeGeneral");
+
+let contador=0;
+
+function validarNombre(){
+
+    if(nombre.value.trim().length<3){
+
+        nombre.classList.add("is-invalid");
+        nombre.classList.remove("is-valid");
+
+        errorNombre.textContent="Debe tener mínimo 3 caracteres.";
+
+        return false;
+    }
+
+    nombre.classList.remove("is-invalid");
+    nombre.classList.add("is-valid");
+
+    errorNombre.textContent="";
+
+    return true;
+
+}
+
+function validarDescripcion(){
+
+    if(descripcion.value.trim().length<10){
+
+        descripcion.classList.add("is-invalid");
+        descripcion.classList.remove("is-valid");
+
+        errorDescripcion.textContent="La descripción debe tener mínimo 10 caracteres.";
+
+        return false;
+    }
+
+    descripcion.classList.remove("is-invalid");
+    descripcion.classList.add("is-valid");
+
+    errorDescripcion.textContent="";
+
+    return true;
+
+}
+
+function validarCategoria(){
+
+    if(categoria.value==""){
+
+        categoria.classList.add("is-invalid");
+        categoria.classList.remove("is-valid");
+
+        errorCategoria.textContent="Seleccione una categoría.";
+
+        return false;
+
+    }
+
+    categoria.classList.remove("is-invalid");
+    categoria.classList.add("is-valid");
+
+    errorCategoria.textContent="";
+
+    return true;
+
+}
+
+nombre.addEventListener("input",validarNombre);
+
+nombre.addEventListener("blur",validarNombre);
+
+descripcion.addEventListener("input",validarDescripcion);
+
+descripcion.addEventListener("blur",validarDescripcion);
+
+categoria.addEventListener("change",validarCategoria);
+
+formulario.addEventListener("submit",function(e){
+
+    e.preventDefault();
+
+    const okNombre=validarNombre();
+
+    const okDescripcion=validarDescripcion();
+
+    const okCategoria=validarCategoria();
+
+    if(!(okNombre && okDescripcion && okCategoria)){
+
+        mensaje.innerHTML='<div class="alert alert-danger">Corrija los errores del formulario.</div>';
+
+        return;
+
+    }
+
+    mensaje.innerHTML='<div class="alert alert-success">Registro agregado correctamente.</div>';
+
+    const card=document.createElement("div");
+
+    card.className="card p-3 m-3";
+
+    card.innerHTML=`
+        <h4>${nombre.value}</h4>
+        <p>${descripcion.value}</p>
+        <span class="badge bg-primary">${categoria.value}</span>
+        <br><br>
+    `;
+
+    const boton=document.createElement("button");
+
+    boton.textContent="Eliminar";
+
+    boton.className="btn btn-danger";
+
+    boton.addEventListener("click",function(){
+
+        card.remove();
+
+        contador--;
+
+        total.textContent=contador;
+
+    });
+
+    card.appendChild(boton);
+
+    lista.appendChild(card);
+
+    contador++;
+
+    total.textContent=contador;
+
+    formulario.reset();
+
+    nombre.className="form-control";
+
+    descripcion.className="form-control";
+
+    categoria.className="form-select";
+
+});
