@@ -1,0 +1,129 @@
+<!-- Encabezado -->
+<header>...</header>
+
+<!-- Menú -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    ...
+</nav>
+<!-- ========================= -->
+
+<main class="container my-5">
+
+<section>
+
+<h2 class="text-center">
+ Registro de Productos
+ </h2>
+
+ <form id="formulario">
+            ...
+  </form>
+
+</section>
+
+ <!-- CONTENIDO DINÁMICO -->
+    <section class="mt-5">
+
+<h2 class="text-center">
+  Productos Registrados
+  </h2>
+
+<div id="mensajeEstado"></div>
+
+        <div
+id="contenedorProductos"
+class="row">
+</div>
+
+</section>
+
+</main>
+
+
+<footer>
+...
+</footer>
+<script src="script.js"></script>
+
+
+const productos = [];
+
+const formulario = document.getElementById("formulario");
+const contenedor = document.getElementById("contenedorProductos");
+const mensaje = document.getElementById("mensajeEstado");
+
+function mostrarProductos(){
+
+    contenedor.innerHTML="";
+
+    if(productos.length==0){
+
+        mensaje.innerHTML=
+        '<div class="alert alert-warning">No existen productos registrados.</div>';
+
+        return;
+
+    }
+
+    mensaje.innerHTML=
+    '<div class="alert alert-success">Productos registrados: '+productos.length+'</div>';
+
+    productos.forEach((producto,index)=>{
+
+        const card=document.createElement("div");
+
+        card.className="col-md-4";
+
+        card.innerHTML=`
+
+        <div class="card p-3 m-2">
+
+  <h4>${producto.nombre}</h4>
+
+  <p>${producto.descripcion}</p>
+
+    <span class="badge bg-primary">
+                ${producto.categoria}
+   </span>
+
+ <button
+  class="btn btn-danger mt-3"
+ onclick="eliminar(${index})">
+
+  Eliminar
+
+ </button>
+
+ </div>
+
+        `;
+
+ contenedor.appendChild(card);
+
+    });
+}
+formulario.addEventListener("submit",(e)=>{
+
+    e.preventDefault();
+
+    if(!validarNombre()) return;
+
+    if(!validarDescripcion()) return;
+
+    if(!validarCategoria()) return;
+
+    productos.push({
+
+        nombre:nombre.value,
+
+        descripcion:descripcion.value,
+
+        categoria:categoria.value
+
+    });
+
+    formulario.reset();
+
+    mostrarProductos();
+
+});
