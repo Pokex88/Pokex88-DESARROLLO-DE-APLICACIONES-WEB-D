@@ -1,0 +1,614 @@
+<!-- Encabezado -->
+<header>...</header>
+
+<!-- Menú -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    ...
+</nav>
+<!-- ========================= -->
+
+<main class="container my-5">
+
+<section>
+
+<h2 class="text-center">
+ Registro de Productos
+ </h2>
+
+ <form id="formulario">
+            ...
+  </form>
+
+</section>
+
+ <!-- CONTENIDO DINÁMICO -->
+    <section class="mt-5">
+
+<h2 class="text-center">
+  Productos Registrados
+  </h2>
+
+<div id="mensajeEstado"></div>
+
+        <div
+id="contenedorProductos"
+class="row">
+</div>
+
+</section>
+
+</main>
+
+
+<footer>
+...
+</footer>
+<script src="script.js"></script>
+
+
+const productos = [];
+
+const formulario = document.getElementById("formulario");
+const contenedor = document.getElementById("contenedorProductos");
+const mensaje = document.getElementById("mensajeEstado");
+
+function mostrarProductos(){
+
+    contenedor.innerHTML="";
+
+    if(productos.length==0){
+
+        mensaje.innerHTML=
+        '<div class="alert alert-warning">No existen productos registrados.</div>';
+
+        return;
+
+    }
+
+    mensaje.innerHTML=
+    '<div class="alert alert-success">Productos registrados: '+productos.length+'</div>';
+
+    productos.forEach((producto,index)=>{
+
+        const card=document.createElement("div");
+
+        card.className="col-md-4";
+
+        card.innerHTML=`
+
+        <div class="card p-3 m-2">
+
+  <h4>${producto.nombre}</h4>
+
+  <p>${producto.descripcion}</p>
+
+    <span class="badge bg-primary">
+                ${producto.categoria}
+   </span>
+
+ <button
+  class="btn btn-danger mt-3"
+ onclick="eliminar(${index})">
+
+  Eliminar
+
+ </button>
+
+ </div>
+
+        `;
+
+ contenedor.appendChild(card);
+
+    });
+}
+formulario.addEventListener("submit",(e)=>{
+
+    e.preventDefault();
+
+    if(!validarNombre()) return;
+
+    if(!validarDescripcion()) return;
+
+    if(!validarCategoria()) return;
+
+    productos.push({
+
+        nombre:nombre.value,
+
+        descripcion:descripcion.value,
+
+        categoria:categoria.value
+
+    });
+
+    formulario.reset();
+
+    mostrarProductos();
+
+// ==========================================
+// ARREGLO DE PRODUCTOS
+// ==========================================
+
+const productos = [];
+
+
+// ==========================================
+// ELEMENTOS DEL DOM
+// ==========================================
+
+const formulario =
+    document.getElementById("formulario");
+
+const nombre =
+    document.getElementById("nombre");
+
+const descripcion =
+    document.getElementById("descripcion");
+
+const categoria =
+    document.getElementById("categoria");
+
+const contenedor =
+    document.getElementById("contenedorProductos");
+
+const mensajeEstado =
+    document.getElementById("mensajeEstado");
+
+const spinner =
+    document.getElementById("spinner");
+
+
+// ==========================================
+// VALIDAR NOMBRE
+// ==========================================
+
+function validarNombre() {
+
+    const valor =
+        nombre.value.trim();
+
+    if (valor.length < 3) {
+
+        nombre.classList.add("is-invalid");
+
+        nombre.classList.remove("is-valid");
+
+        return false;
+
+    }
+
+    nombre.classList.remove("is-invalid");
+
+    nombre.classList.add("is-valid");
+
+    return true;
+
+}
+
+
+// ==========================================
+// VALIDAR DESCRIPCIÓN
+// ==========================================
+
+function validarDescripcion() {
+
+    const valor =
+        descripcion.value.trim();
+
+    if (valor.length < 10) {
+
+        descripcion.classList.add("is-invalid");
+
+        descripcion.classList.remove("is-valid");
+
+        return false;
+
+    }
+
+    descripcion.classList.remove("is-invalid");
+
+    descripcion.classList.add("is-valid");
+
+    return true;
+
+}
+
+
+// ==========================================
+// VALIDAR CATEGORÍA
+// ==========================================
+
+function validarCategoria() {
+
+    if (categoria.value === "") {
+
+        categoria.classList.add("is-invalid");
+
+        categoria.classList.remove("is-valid");
+
+        return false;
+
+    }
+
+    categoria.classList.remove("is-invalid");
+
+    categoria.classList.add("is-valid");
+
+    return true;
+
+}
+
+
+// ==========================================
+// VALIDACIONES EN TIEMPO REAL
+// ==========================================
+
+nombre.addEventListener(
+    "input",
+    validarNombre
+);
+
+nombre.addEventListener(
+    "blur",
+    validarNombre
+);
+
+
+descripcion.addEventListener(
+    "input",
+    validarDescripcion
+);
+
+descripcion.addEventListener(
+    "blur",
+    validarDescripcion
+);
+
+
+categoria.addEventListener(
+    "change",
+    validarCategoria
+);
+
+
+// ==========================================
+// MOSTRAR ALERTA
+// ==========================================
+
+function mostrarMensaje(
+    texto,
+    tipo
+) {
+
+    mensajeEstado.innerHTML = `
+
+   <div
+ class="alert alert-${tipo}"
+role="alert">
+
+            ${texto}
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================
+// RENDERIZAR PRODUCTOS
+// ==========================================
+
+function mostrarProductos() {
+
+    contenedor.innerHTML = "";
+
+    if (productos.length === 0) {
+
+        mostrarMensaje(
+            "No existen productos registrados.",
+            "warning"
+        );
+
+        return;
+
+    }
+
+
+    mostrarMensaje(
+        "Los productos se han cargado correctamente.",
+        "success"
+    );
+
+
+    productos.forEach(
+        (producto, indice) => {
+
+            const columna =
+                document.createElement("div");
+
+            columna.className =
+                "col-sm-12 col-md-6 col-lg-4";
+
+
+            const card =
+                document.createElement("div");
+
+            card.className =
+                "card product-card shadow p-3";
+
+
+            const titulo =
+                document.createElement("h5");
+
+            titulo.className =
+                "card-title";
+
+            titulo.textContent =
+                producto.nombre;
+
+
+            const texto =
+                document.createElement("p");
+
+            texto.className =
+                "card-text";
+
+            texto.textContent =
+                producto.descripcion;
+
+
+            const badge =
+                document.createElement("span");
+
+            badge.className =
+                "badge bg-primary mb-3";
+
+            badge.textContent =
+                producto.categoria;
+
+
+            // Botón detalles
+            const botonDetalles =
+                document.createElement("button");
+
+            botonDetalles.className =
+                "btn btn-success me-2";
+
+            botonDetalles.textContent =
+                "Ver detalles";
+
+
+botonDetalles.addEventListener(
+                "click",
+                function () {
+
+ mostrarDetalles(
+                        producto
+ );
+
+                }
+            );
+
+
+ // Botón eliminar
+            const botonEliminar =
+                document.createElement("button");
+
+botonEliminar.className =
+                "btn btn-danger";
+
+ botonEliminar.textContent =
+                "Eliminar";
+
+
+   botonEliminar.addEventListener(
+                "click",
+                function () {
+
+      eliminarProducto(
+     indice
+                    );
+
+                }
+            );
+
+
+            card.appendChild(titulo);
+
+            card.appendChild(badge);
+
+            card.appendChild(texto);
+
+            card.appendChild(
+                botonDetalles
+            );
+
+            card.appendChild(
+                botonEliminar
+            );
+
+
+            columna.appendChild(card);
+
+            contenedor.appendChild(
+                columna
+            );
+
+        }
+    );
+
+}
+
+
+// ==========================================
+// MOSTRAR DETALLES EN MODAL
+// ==========================================
+
+function mostrarDetalles(
+    producto
+) {
+
+    const detalle =
+        document.getElementById(
+            "detalleProducto"
+        );
+
+
+    detalle.innerHTML = `
+
+        <h5>${producto.nombre}</h5>
+
+        <p>
+            <strong>Categoría:</strong>
+            ${producto.categoria}
+        </p>
+
+        <p>
+            <strong>Descripción:</strong>
+            ${producto.descripcion}
+        </p>
+
+    `;
+
+
+    const modal =
+        new bootstrap.Modal(
+  document.getElementById(
+"modalProducto"
+            )
+        );
+
+
+    modal.show();
+
+}
+
+
+// ==========================================
+// ELIMINAR PRODUCTO
+// ==========================================
+
+function eliminarProducto(
+    indice
+) {
+
+    productos.splice(
+        indice,
+        1
+    );
+
+
+    mostrarProductos();
+
+}
+
+
+// ==========================================
+// REGISTRAR PRODUCTO
+// ==========================================
+
+formulario.addEventListener(
+    "submit",
+    function (e) {
+
+        e.preventDefault();
+
+
+        const nombreValido =
+            validarNombre();
+
+        const descripcionValida =
+            validarDescripcion();
+
+        const categoriaValida =
+            validarCategoria();
+
+
+        if (
+            !nombreValido ||
+            !descripcionValida ||
+            !categoriaValida
+        ) {
+
+ mostrarMensaje(
+ "Por favor, corrija los errores del formulario.",
+                "danger"
+            );
+
+            return;
+
+        }
+
+
+        // Mostrar spinner
+        spinner.classList.remove(
+            "d-none"
+        );
+
+
+ // Simulación de proceso
+        setTimeout(
+            function () {
+
+                const nuevoProducto = {
+
+   nombre:
+                        nombre.value.trim(),
+
+ descripcion:
+                        descripcion.value.trim(),
+
+  categoria:
+                        categoria.value
+
+                };
+
+
+  productos.push(
+                    nuevoProducto
+                );
+
+
+ formulario.reset();
+
+
+ nombre.className =
+                    "form-control";
+
+  descripcion.className =
+                    "form-control";
+
+  categoria.className =
+                    "form-control";
+
+
+  spinner.classList.add(
+    "d-none"
+        );
+
+
+      mostrarMensaje(
+     "Producto registrado correctamente.",
+                    "success"
+                );
+
+
+   mostrarProductos();
+
+ },
+            1000
+        );
+
+    }
+);
+
+
+// ==========================================
+// MOSTRAR PRODUCTOS INICIALMENTE
+// ==========================================
+
+mostrarProductos();
+
+});
