@@ -1,0 +1,181 @@
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+
+# =========================================================
+# DATOS DE EJEMPLO
+# =========================================================
+
+# Variable simple
+nombre_empresa = "TechStore"
+
+
+# Lista de productos con diccionarios
+productos = [
+    {
+        "nombre": "Laptop Lenovo",
+        "categoria": "Laptop",
+        "precio": 650,
+        "stock": 5
+    },
+    {
+        "nombre": "PC Gamer",
+        "categoria": "Computadora",
+        "precio": 950,
+        "stock": 3
+    },
+    {
+        "nombre": "Mouse inalámbrico",
+        "categoria": "Accesorio",
+        "precio": 25,
+        "stock": 0
+    },
+    {
+        "nombre": "Teclado mecánico",
+        "categoria": "Accesorio",
+        "precio": 45,
+        "stock": 8
+    }
+]
+
+
+# Lista de clientes
+clientes = [
+    {
+        "nombre": "Juan Pérez",
+        "correo": "juan@gmail.com",
+        "estado": "Activo"
+    },
+    {
+        "nombre": "María López",
+        "correo": "maria@gmail.com",
+        "estado": "Activo"
+    },
+    {
+        "nombre": "Carlos Sánchez",
+        "correo": "carlos@gmail.com",
+        "estado": "Inactivo"
+    }
+]
+
+
+# Lista de proveedores
+proveedores = [
+    {
+        "empresa": "Tech Ecuador",
+        "contacto": "0999999999",
+        "ciudad": "Quito"
+    },
+    {
+        "empresa": "Digital Store",
+        "contacto": "0988888888",
+        "ciudad": "Guayaquil"
+    },
+    {
+        "empresa": "CompuMarket",
+        "contacto": "0977777777",
+        "ciudad": "Cuenca"
+    }
+]
+
+
+# Lista de facturas
+facturas = [
+    {
+        "numero": "001-001-00001",
+        "cliente": "Juan Pérez",
+        "total": 650,
+        "estado": "Pagada"
+    },
+    {
+        "numero": "001-001-00002",
+        "cliente": "María López",
+        "total": 950,
+        "estado": "Pendiente"
+    },
+    {
+        "numero": "001-001-00003",
+        "cliente": "Carlos Sánchez",
+        "total": 45,
+        "estado": "Pagada"
+    }
+]
+
+
+# =========================================================
+# RUTA PRINCIPAL
+# =========================================================
+
+@app.route("/")
+def inicio():
+
+    return render_template(
+        "index.html",
+        empresa=nombre_empresa,
+        productos=productos
+    )
+
+
+# =========================================================
+# RUTA PRODUCTOS
+# =========================================================
+
+@app.route("/productos")
+def mostrar_productos():
+
+    return render_template(
+        "productos.html",
+        empresa=nombre_empresa,
+        productos=productos
+    )
+
+
+# =========================================================
+# RUTA CLIENTES
+# =========================================================
+
+@app.route("/clientes")
+def mostrar_clientes():
+
+    return render_template(
+        "clientes.html",
+        empresa=nombre_empresa,
+        clientes=clientes
+    )
+
+
+# =========================================================
+# RUTA PROVEEDORES
+# =========================================================
+
+@app.route("/proveedores")
+def mostrar_proveedores():
+
+    return render_template(
+        "proveedores.html",
+        empresa=nombre_empresa,
+        proveedores=proveedores
+    )
+
+
+# =========================================================
+# RUTA FACTURACIÓN
+# =========================================================
+
+@app.route("/facturacion")
+def mostrar_facturacion():
+
+    return render_template(
+        "facturacion.html",
+        empresa=nombre_empresa,
+        facturas=facturas
+    )
+
+
+# =========================================================
+# EJECUTAR APLICACIÓN
+# =========================================================
+
+if __name__ == "__main__":
+    app.run(debug=True)
