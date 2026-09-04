@@ -1,0 +1,301 @@
+from flask import Flask, render_template, redirect, url_for
+from forms.producto_form import ProductoForm
+import sqlite3
+import os
+
+
+app = Flask(__name__)
+
+# =========================================================
+# CONFIGURACIÓN
+# =========================================================
+
+app.config["SECRET_KEY"] = "clave-secreta-ferreteria-2026"
+
+
+# =========================================================
+# UBICACIÓN DE LA BASE DE DATOS
+# =========================================================
+
+DATABASE = os.path.join(
+    os.path.dirname(__file__),
+    "data",
+    "ferreteria.db"
+)
+
+
+# =========================================================
+# CREAR CARPETA DATA
+# =========================================================
+
+os.makedirs(
+    os.path.dirname(DATABASE),
+    exist_ok=True
+)
+
+
+# =========================================================
+# FUNCIÓN PARA CREAR LA BASE DE DATOS
+# =========================================================
+
+def inicializar_bd():
+
+    conn = sqlite3.connect(DATABASE)
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS productos (
+
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  nombre TEXT NOT NULL,
+
+ descripcion TEXT NOT NULL,
+
+categoria TEXT NOT NULL,
+
+precio REAL NOT NULL,
+
+  stock INTEGER NOT NULL
+
+        )
+    """)
+
+    conn.commit()
+
+    conn.close()
+
+
+# =========================================================
+# PÁGINA PRINCIPAL
+# =========================================================
+
+@app.route("/")
+def inicio():
+
+    return render_template(
+        "index.html"
+    )
+
+
+# =========================================================
+# PRODUCTOS
+# =========================================================
+
+@app.route("/productos", methods=["GET", "POST"])
+def productos():
+
+    form = ProductoForm()
+
+    # ---------------------------------------------
+    # INSERTAR PRODUCTO
+    # ---------------------------------------------
+
+    if form.validate_on_submit():
+
+        conn = sqlite3.connect(DATABASE)
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+  INSERT INTO productos
+ (nombre, descripcion, categoria, precio, stock)
+ VALUES (?, ?, ?, ?, ?)
+        """, (
+
+ form.nombre.data,
+
+ form.descripcion.data,
+
+  form.categoria.data,
+
+form.precio.data,
+
+ form.stock.data
+
+        ))
+
+        conn.commit()
+
+        conn.close()
+
+        return redirect(
+            url_for("productos")
+        )
+
+
+    # ---------------------------------------------
+    # CONSULTAR PRODUCTOS
+    # ---------------------------------------------
+
+    conn = sqlite3.connect(DATABASE)
+
+    cursor = conn.cursor()
+
+ cursor.execute("""
+ SELECT
+ id,
+nombre,
+ descripcion,
+categoria,
+   precio,
+            stock
+        FROM productos
+        ORDER BY id DESC
+    """)
+
+    productos = cursor.fetchall()
+
+    conn.close()
+
+
+    return render_template(
+        "productos.html",
+        form=form,
+        productos=productos
+    )
+
+
+# =========================================================
+# CLIENTES
+# =========================================================
+
+@app.route("/clientes")
+def clientes():
+
+    return render_template(
+        "clientes.html"
+    )
+
+
+# =========================================================
+# PROVEEDORES
+# =========================================================
+
+@app.route("/proveedores")
+def proveedores():
+
+    return render_template(
+        "proveedores.html"
+    )
+
+
+# =========================================================
+# FACTURACIÓN
+# =========================================================
+
+@app.route("/facturacion")
+def facturacion():
+
+    return render_template(
+        "facturacion.html"
+    )
+
+
+# =========================================================
+# EJECUTAR APLICACIÓN
+# =========================================================
+
+if __name__ == "__main__":
+
+    inicializar_bd()
+
+    app.run(debug=True)
+
+
+from flask_wtf import FlaskForm
+
+from wtforms import (
+    StringField,
+    TextAreaField,
+    SelectField,
+    FloatField,
+    IntegerField,
+    SubmitField
+)
+
+from wtforms.validators import (
+    DataRequired,
+    Length,
+    NumberRange
+)
+
+
+class ProductoForm(FlaskForm):
+
+ nombre = StringField(
+  "Nombre",
+  validators=[
+  DataRequired(
+   message="El nombre es obligatorio."
+  ),
+Length(
+min=3,
+message="El nombre debe tener al menos 3 caracteres."
+ )
+        ]
+    )
+
+
+    descripcion = TextAreaField(
+  "Descripción",
+  validators=[
+   DataRequired(
+  message="La descripción es obligatoria."
+ ),
+ Length(
+  min=10,
+ message="La descripción debe tener al menos 10 caracteres."
+)
+ ]
+ )
+
+    categoria = SelectField(
+"Categoría",
+choices=[
+ ("", "Seleccione una categoría"),
+   ("Herramientas", "Herramientas"),
+ ("Materiales", "Materiales"),
+ ("Electricidad", "Electricidad"),
+  ("Plomería", "Plomería")
+        ],
+        validators=[
+            DataRequired(
+                message="Seleccione una categoría."
+            )
+        ]
+    )
+
+
+    precio = FloatField(
+ "Precio",
+validators=[
+DataRequired(
+ message="Ingrese el precio."
+ ),
+NumberRange(
+  min=0,
+message="El precio no puede ser negativo."
+ )
+        ]
+    )
+
+
+    stock = IntegerField(
+ "Stock",
+ validators=[
+  DataRequired(
+   message="Ingrese el stock."
+),
+ NumberRange(
+ min=0,
+ message="El stock no puede ser negativo."
+ )
+ ]
+)
+
+
+    submit = SubmitField(
+        "Guardar producto"
+    )
