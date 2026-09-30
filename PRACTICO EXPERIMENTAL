@@ -1,0 +1,1555 @@
+from flask import (
+    Flask,
+    render_template,
+    redirect,
+    url_for,
+    session,
+    flash
+)
+
+from functools import wraps
+from forms.login_form import LoginForm
+from forms.producto_form import ProductoForm
+
+import sqlite3
+import os
+
+
+app = Flask(__name__)
+
+app.config["SECRET_KEY"] = "ferreteria-clave-secreta-2026"
+
+DATABASE = os.path.join(
+    os.path.dirname(__file__),
+    "data",
+    "ferreteria.db"
+)
+
+
+# =========================
+# CONEXIÓN A BASE DE DATOS
+# =========================
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
+# =========================
+# CREAR BASE DE DATOS
+# =========================
+
+def inicializar_bd():
+
+    os.makedirs("data", exist_ok=True)
+
+    conn = get_db()
+
+    # Usuarios
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
+
+    # Categorías
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL
+        )
+    """)
+
+    # Proveedores
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS proveedores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            telefono TEXT,
+            ciudad TEXT
+        )
+    """)
+
+    # Productos
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS productos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            descripcion TEXT NOT NULL,
+            precio REAL NOT NULL,
+            stock INTEGER NOT NULL,
+            categoria_id INTEGER,
+            proveedor_id INTEGER,
+
+            FOREIGN KEY (categoria_id)
+            REFERENCES categorias(id),
+
+            FOREIGN KEY (proveedor_id)
+            REFERENCES proveedores(id)
+        )
+    """)
+
+    # Clientes
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            correo TEXT NOT NULL,
+            telefono TEXT
+        )
+    """)
+
+    # Usuario administrador
+    usuario = conn.execute("""
+        SELECT id FROM usuarios
+        WHERE usuario = ?
+    """, ("admin",)).fetchone()
+
+    if usuario is None:
+        conn.execute("""
+            INSERT INTO usuarios (usuario, password)
+            VALUES (?, ?)
+        """, ("admin", "1234"))
+
+    # Categorías iniciales
+    categorias = [
+        ("Herramientas manuales",),
+        ("Herramientas eléctricas",),
+        ("Construcción",),
+        ("Pinturas",),
+        ("Seguridad",)
+    ]
+
+    for categoria in categorias:
+        try:
+            conn.execute("""
+                INSERT INTO categorias (nombre)
+                VALUES (?)
+            """, categoria)
+        except sqlite3.IntegrityError:
+            pass
+
+    # Proveedores iniciales
+    proveedores = [
+        ("Proveedor Central", "0991111111", "Quito"),
+        ("FerreMateriales", "0982222222", "Quito"),
+        ("Herramientas Ecuador", "0973333333", "Quito")
+    ]
+
+    for proveedor in proveedores:
+        conn.execute("""
+            INSERT INTO proveedores
+            (nombre, telefono, ciudad)
+            VALUES (?, ?, ?)
+        """, proveedor)
+
+    conn.commit()
+    conn.close()
+
+
+# =========================
+# PROTEGER PÁGINAS
+# =========================
+
+def login_required(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        if "usuario_id" not in session:
+            return redirect(url_for("login"))
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+# =========================
+# LOGIN
+# =========================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+
+    form = LoginForm()
+
+    if form.validate_on_submit():
+
+        conn = get_db()
+
+        usuario = conn.execute("""
+            SELECT *
+            FROM usuarios
+            WHERE usuario = ?
+            AND password = ?
+        """, (
+            form.usuario.data,
+            form.password.data
+        )).fetchone()
+
+        conn.close()
+
+        if usuario:
+
+            session["usuario_id"] = usuario["id"]
+            session["usuario"] = usuario["usuario"]
+
+            flash(
+                "Inicio de sesión correcto.",
+                "success"
+            )
+
+            return redirect(url_for("inicio"))
+
+        flash(
+            "Usuario o contraseña incorrectos.",
+            "danger"
+        )
+
+    return render_template(
+        "login.html",
+        form=form
+    )
+
+
+# =========================
+# CERRAR SESIÓN
+# =========================
+
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    flash(
+        "Sesión cerrada correctamente.",
+        "success"
+    )
+
+    return redirect(url_for("login"))
+
+
+# =========================
+# INICIO
+# =========================
+
+@app.route("/")
+@login_required
+def inicio():
+
+    conn = get_db()
+
+    productos = conn.execute("""
+        SELECT COUNT(*) AS total
+        FROM productos
+    """).fetchone()["total"]
+
+    clientes = conn.execute("""
+        SELECT COUNT(*) AS total
+        FROM clientes
+    """).fetchone()["total"]
+
+    proveedores = conn.execute("""
+        SELECT COUNT(*) AS total
+        FROM proveedores
+    """).fetchone()["total"]
+
+    conn.close()
+
+    return render_template(
+        "index.html",
+        productos=productos,
+        clientes=clientes,
+        proveedores=proveedores
+    )
+
+
+# =========================
+# PRODUCTOS - LEER
+# =========================
+
+@app.route("/productos")
+@login_required
+def productos():
+
+    conn = get_db()
+
+    productos = conn.execute("""
+        SELECT
+            productos.*,
+            categorias.nombre AS categoria,
+            proveedores.nombre AS proveedor
+
+        FROM productos
+
+        LEFT JOIN categorias
+        ON productos.categoria_id = categorias.id
+
+        LEFT JOIN proveedores
+        ON productos.proveedor_id = proveedores.id
+
+        ORDER BY productos.id DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "productos.html",
+        productos=productos
+    )
+
+
+# =========================
+# PRODUCTOS - CREAR
+# =========================
+
+@app.route("/productos/nuevo", methods=["GET", "POST"])
+@login_required
+def nuevo_producto():
+
+    form = ProductoForm()
+
+    conn = get_db()
+
+    categorias = conn.execute("""
+        SELECT *
+        FROM categorias
+        ORDER BY nombre
+    """).fetchall()
+
+    proveedores = conn.execute("""
+        SELECT *
+        FROM proveedores
+        ORDER BY nombre
+    """).fetchall()
+
+    form.categoria_id.choices = [
+        (categoria["id"], categoria["nombre"])
+        for categoria in categorias
+    ]
+
+    form.proveedor_id.choices = [
+        (proveedor["id"], proveedor["nombre"])
+        for proveedor in proveedores
+    ]
+
+    if form.validate_on_submit():
+
+        conn.execute("""
+            INSERT INTO productos
+            (
+                nombre,
+                descripcion,
+                precio,
+                stock,
+                categoria_id,
+                proveedor_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            form.nombre.data,
+            form.descripcion.data,
+            form.precio.data,
+            form.stock.data,
+            form.categoria_id.data,
+            form.proveedor_id.data
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash(
+            "Producto creado correctamente.",
+            "success"
+        )
+
+        return redirect(url_for("productos"))
+
+    conn.close()
+
+    return render_template(
+        "editar_producto.html",
+        form=form,
+        titulo="Nuevo producto"
+    )
+
+
+# =========================
+# PRODUCTOS - ACTUALIZAR
+# =========================
+
+@app.route(
+    "/productos/editar/<int:id>",
+    methods=["GET", "POST"]
+)
+@login_required
+def editar_producto(id):
+
+    conn = get_db()
+
+    producto = conn.execute("""
+        SELECT *
+        FROM productos
+        WHERE id = ?
+    """, (id,)).fetchone()
+
+    if producto is None:
+
+        conn.close()
+
+        flash(
+            "Producto no encontrado.",
+            "danger"
+        )
+
+        return redirect(url_for("productos"))
+
+    form = ProductoForm()
+
+    categorias = conn.execute("""
+        SELECT *
+        FROM categorias
+        ORDER BY nombre
+    """).fetchall()
+
+    proveedores = conn.execute("""
+        SELECT *
+        FROM proveedores
+        ORDER BY nombre
+    """).fetchall()
+
+    form.categoria_id.choices = [
+        (categoria["id"], categoria["nombre"])
+        for categoria in categorias
+    ]
+
+    form.proveedor_id.choices = [
+        (proveedor["id"], proveedor["nombre"])
+        for proveedor in proveedores
+    ]
+
+    if form.validate_on_submit():
+
+        conn.execute("""
+            UPDATE productos
+
+            SET
+                nombre = ?,
+                descripcion = ?,
+                precio = ?,
+                stock = ?,
+                categoria_id = ?,
+                proveedor_id = ?
+
+            WHERE id = ?
+        """, (
+            form.nombre.data,
+            form.descripcion.data,
+            form.precio.data,
+            form.stock.data,
+            form.categoria_id.data,
+            form.proveedor_id.data,
+            id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash(
+            "Producto actualizado correctamente.",
+            "success"
+        )
+
+        return redirect(url_for("productos"))
+
+    if not form.is_submitted():
+
+        form.nombre.data = producto["nombre"]
+        form.descripcion.data = producto["descripcion"]
+        form.precio.data = producto["precio"]
+        form.stock.data = producto["stock"]
+        form.categoria_id.data = producto["categoria_id"]
+        form.proveedor_id.data = producto["proveedor_id"]
+
+    conn.close()
+
+    return render_template(
+        "editar_producto.html",
+        form=form,
+        titulo="Editar producto"
+    )
+
+
+# =========================
+# PRODUCTOS - ELIMINAR
+# =========================
+
+@app.route(
+    "/productos/eliminar/<int:id>",
+    methods=["POST"]
+)
+@login_required
+def eliminar_producto(id):
+
+    conn = get_db()
+
+    conn.execute("""
+        DELETE FROM productos
+        WHERE id = ?
+    """, (id,))
+
+    conn.commit()
+    conn.close()
+
+    flash(
+        "Producto eliminado correctamente.",
+        "success"
+    )
+
+    return redirect(url_for("productos"))
+
+
+# =========================
+# CLIENTES
+# =========================
+
+@app.route("/clientes")
+@login_required
+def clientes():
+
+    conn = get_db()
+
+    clientes = conn.execute("""
+        SELECT *
+        FROM clientes
+        ORDER BY id DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "clientes.html",
+        clientes=clientes
+    )
+
+
+# =========================
+# PROVEEDORES
+# =========================
+
+@app.route("/proveedores")
+@login_required
+def proveedores():
+
+    conn = get_db()
+
+    proveedores = conn.execute("""
+        SELECT *
+        FROM proveedores
+        ORDER BY id DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "proveedores.html",
+        proveedores=proveedores
+    )
+
+
+# =========================
+# FACTURACIÓN
+# =========================
+
+@app.route("/facturacion")
+@login_required
+def facturacion():
+
+    return render_template("facturacion.html")
+
+
+# =========================
+# EJECUTAR
+# =========================
+
+if __name__ == "__main__":
+
+    inicializar_bd()
+
+    app.run(debug=True)
+
+from flask_wtf import FlaskForm
+
+from wtforms import (
+    StringField,
+    PasswordField,
+    SubmitField
+)
+
+from wtforms.validators import DataRequired
+
+
+class LoginForm(FlaskForm):
+
+    usuario = StringField(
+        "Usuario",
+        validators=[
+            DataRequired(
+                message="Ingrese el usuario."
+            )
+        ]
+    )
+
+    password = PasswordField(
+        "Contraseña",
+        validators=[
+            DataRequired(
+                message="Ingrese la contraseña."
+            )
+        ]
+    )
+
+    submit = SubmitField(
+        "Iniciar sesión"
+    )
+
+
+
+
+
+from flask_wtf import FlaskForm
+
+from wtforms import (
+    StringField,
+    TextAreaField,
+    FloatField,
+    IntegerField,
+    SelectField,
+    SubmitField
+)
+
+from wtforms.validators import (
+    DataRequired,
+    Length,
+    NumberRange
+)
+
+
+class ProductoForm(FlaskForm):
+
+    nombre = StringField(
+        "Nombre del producto",
+        validators=[
+            DataRequired(
+                message="Ingrese el nombre."
+            ),
+            Length(
+                min=3,
+                message="El nombre debe tener al menos 3 caracteres."
+            )
+        ]
+    )
+
+    descripcion = TextAreaField(
+        "Descripción",
+        validators=[
+            DataRequired(
+                message="Ingrese una descripción."
+            ),
+            Length(
+                min=10,
+                message="La descripción debe tener al menos 10 caracteres."
+            )
+        ]
+    )
+
+    precio = FloatField(
+        "Precio",
+        validators=[
+            DataRequired(
+                message="Ingrese el precio."
+            ),
+            NumberRange(
+                min=0,
+                message="El precio no puede ser negativo."
+            )
+        ]
+    )
+
+    stock = IntegerField(
+        "Stock",
+        validators=[
+            DataRequired(
+                message="Ingrese el stock."
+            ),
+            NumberRange(
+                min=0,
+                message="El stock no puede ser negativo."
+            )
+        ]
+    )
+
+    categoria_id = SelectField(
+        "Categoría",
+        coerce=int,
+        validators=[
+            DataRequired(
+                message="Seleccione una categoría."
+            )
+        ]
+    )
+
+    proveedor_id = SelectField(
+        "Proveedor",
+        coerce=int,
+        validators=[
+            DataRequired(
+                message="Seleccione un proveedor."
+            )
+        ]
+    )
+
+    submit = SubmitField(
+        "Guardar producto"
+    )
+
+
+
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% block title %}
+        Ferretería
+        {% endblock %}
+    </title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+</head>
+
+<body>
+
+    {% if session.get("usuario_id") %}
+
+        {% include "components/navbar.html" %}
+
+    {% endif %}
+
+
+    <main class="container">
+
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+
+            {% if mensajes %}
+
+                {% for categoria, mensaje in mensajes %}
+
+                    <div class="alert alert-{{ categoria }} mt-3">
+
+                        {{ mensaje }}
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        {% block content %}
+
+        {% endblock %}
+
+    </main>
+
+
+    <footer>
+
+        <p>
+            © 2026 Ferretería - Todos los derechos reservados.
+        </p>
+
+    </footer>
+
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+    <script
+        src="{{ url_for('static', filename='js/script.js') }}">
+    </script>
+
+</body>
+
+</html>
+
+
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+    <div class="container">
+
+        <a
+            class="navbar-brand"
+            href="{{ url_for('inicio') }}"
+        >
+            🔨 Ferretería
+        </a>
+
+
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#menu"
+        >
+
+            <span class="navbar-toggler-icon"></span>
+
+        </button>
+
+
+        <div
+            class="collapse navbar-collapse"
+            id="menu"
+        >
+
+            <ul class="navbar-nav me-auto">
+
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="{{ url_for('inicio') }}"
+                    >
+                        Inicio
+                    </a>
+
+                </li>
+
+
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="{{ url_for('productos') }}"
+                    >
+                        Productos
+                    </a>
+
+                </li>
+
+
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="{{ url_for('clientes') }}"
+                    >
+                        Clientes
+                    </a>
+
+                </li>
+
+
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="{{ url_for('proveedores') }}"
+                    >
+                        Proveedores
+                    </a>
+
+                </li>
+
+
+                <li class="nav-item">
+
+                    <a
+                        class="nav-link"
+                        href="{{ url_for('facturacion') }}"
+                    >
+                        Facturación
+                    </a>
+
+                </li>
+
+            </ul>
+
+
+            <span class="navbar-text me-3">
+
+                👤 {{ session.get("usuario") }}
+
+            </span>
+
+
+            <a
+                href="{{ url_for('logout') }}"
+                class="btn btn-danger btn-sm"
+            >
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </div>
+
+</nav>
+
+
+
+{% extends "base.html" %}
+
+{% block title %}
+Inicio - Ferretería
+{% endblock %}
+
+
+{% block content %}
+
+<div class="hero">
+
+    <h1>
+        🔨 Ferretería
+    </h1>
+
+    <p>
+        Todo lo que necesitas para tus proyectos.
+    </p>
+
+    <p>
+        Herramientas, materiales y productos
+        para construcción, reparación y mantenimiento.
+    </p>
+
+</div>
+
+
+<div class="row">
+
+
+    <div class="col-md-4">
+
+        <div class="card text-center">
+
+            <div class="card-body">
+
+                <div class="card-icon">
+                    🔧
+                </div>
+
+                <h3>
+                    Productos
+                </h3>
+
+                <p>
+                    {{ productos }} productos registrados.
+                </p>
+
+                <a
+                    href="{{ url_for('productos') }}"
+                    class="btn btn-primary"
+                >
+                    Ver productos
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-4">
+
+        <div class="card text-center">
+
+            <div class="card-body">
+
+                <div class="card-icon">
+                    👥
+                </div>
+
+                <h3>
+                    Clientes
+                </h3>
+
+                <p>
+                    {{ clientes }} clientes registrados.
+                </p>
+
+                <a
+                    href="{{ url_for('clientes') }}"
+                    class="btn btn-success"
+                >
+                    Ver clientes
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-4">
+
+        <div class="card text-center">
+
+            <div class="card-body">
+
+                <div class="card-icon">
+                    🚚
+                </div>
+
+                <h3>
+                    Proveedores
+                </h3>
+
+                <p>
+                    {{ proveedores }} proveedores registrados.
+                </p>
+
+                <a
+                    href="{{ url_for('proveedores') }}"
+                    class="btn btn-warning"
+                >
+                    Ver proveedores
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="card mt-4">
+
+    <div class="card-body">
+
+        <h2>
+            ¿Quiénes somos?
+        </h2>
+
+        <p>
+            Somos una ferretería dedicada a ofrecer herramientas
+            y materiales de calidad para proyectos de construcción,
+            reparación y mantenimiento.
+        </p>
+
+        <p>
+            Nuestro objetivo es brindar una atención rápida,
+            confiable y accesible, ayudando a nuestros clientes
+            a encontrar los productos que necesitan.
+        </p>
+
+    </div>
+
+</div>
+
+
+<div class="card mt-4">
+
+    <div class="card-body">
+
+        <h2>
+            ¿Por qué elegirnos?
+        </h2>
+
+        <p>
+            ✔ Variedad de productos.
+        </p>
+
+        <p>
+            ✔ Atención rápida y personalizada.
+        </p>
+
+        <p>
+            ✔ Productos de calidad.
+        </p>
+
+        <p>
+            ✔ Precios accesibles.
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+
+
+{% extends "base.html" %}
+
+{% block title %}
+Clientes - Ferretería
+{% endblock %}
+
+
+{% block content %}
+
+<h1>
+    👥 Clientes
+</h1>
+
+
+{% if clientes %}
+
+<div class="table-responsive">
+
+<table class="table table-bordered table-hover">
+
+    <thead class="table-dark">
+
+        <tr>
+
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Teléfono</th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody>
+
+        {% for cliente in clientes %}
+
+        <tr>
+
+            <td>
+                {{ cliente["id"] }}
+            </td>
+
+            <td>
+                {{ cliente["nombre"] }}
+            </td>
+
+            <td>
+                {{ cliente["correo"] }}
+            </td>
+
+            <td>
+                {{ cliente["telefono"] }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+</div>
+
+
+{% else %}
+
+<div class="alert alert-info">
+
+    No existen clientes registrados.
+
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+
+{% extends "base.html" %}
+
+{% block title %}
+Proveedores - Ferretería
+{% endblock %}
+
+
+{% block content %}
+
+<h1>
+    🚚 Proveedores
+</h1>
+
+
+{% if proveedores %}
+
+<div class="table-responsive">
+
+<table class="table table-bordered table-hover">
+
+    <thead class="table-dark">
+
+        <tr>
+
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Ciudad</th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody>
+
+        {% for proveedor in proveedores %}
+
+        <tr>
+
+            <td>
+                {{ proveedor["id"] }}
+            </td>
+
+            <td>
+                {{ proveedor["nombre"] }}
+            </td>
+
+            <td>
+                {{ proveedor["telefono"] }}
+            </td>
+
+            <td>
+                {{ proveedor["ciudad"] }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+
+
+
+
+
+body {
+    background-color: #f4f6f9;
+    font-family: Arial, sans-serif;
+    color: #333;
+}
+
+.navbar {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.4rem;
+}
+
+main {
+    min-height: 75vh;
+    padding-top: 30px;
+    padding-bottom: 30px;
+}
+
+h1 {
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.10);
+    margin-bottom: 20px;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    transition: 0.2s;
+}
+
+.btn {
+    border-radius: 7px;
+    font-weight: 500;
+}
+
+.table {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table th,
+.table td {
+    vertical-align: middle;
+}
+
+.form-control,
+.form-select {
+    border-radius: 7px;
+    padding: 10px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.alert {
+    border-radius: 8px;
+}
+
+.login-container {
+    max-width: 420px;
+    margin: 60px auto;
+}
+
+.login-card {
+    padding: 30px;
+}
+
+.hero {
+    padding: 50px 20px;
+    text-align: center;
+    background-color: white;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.hero h1 {
+    font-size: 2.5rem;
+}
+
+.hero p {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+.card-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+}
+
+.estado-disponible {
+    color: green;
+    font-weight: bold;
+}
+
+.estado-agotado {
+    color: red;
+    font-weight: bold;
+}
+
+footer {
+    background-color: #212529;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+footer p {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+
+    main {
+        padding: 20px 10px;
+    }
+
+    .hero {
+        padding: 30px 15px;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .table {
+        font-size: 14px;
+    }
+
+    .btn {
+        margin-bottom: 5px;
+    }
+}
+
+</div>
+
+
+{% else %}
+
+<div class="alert alert-info">
+
+    No existen proveedores registrados.
+
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    console.log("Sistema de Ferretería cargado correctamente.");
+
+
+    // Confirmar eliminación
+    const formulariosEliminar =
+        document.querySelectorAll(".form-eliminar");
+
+    formulariosEliminar.forEach(function (formulario) {
+
+        formulario.addEventListener("submit", function (evento) {
+
+            const confirmar = confirm(
+                "¿Está seguro de que desea eliminar este producto?"
+            );
+
+            if (!confirmar) {
+                evento.preventDefault();
+            }
+
+        });
+
+    });
+
+
+    // Ocultar alertas automáticamente
+    const alertas =
+        document.querySelectorAll(".alert");
+
+    alertas.forEach(function (alerta) {
+
+        setTimeout(function () {
+
+            alerta.style.transition = "opacity 0.5s";
+            alerta.style.opacity = "0";
+
+            setTimeout(function () {
+                alerta.remove();
+            }, 500);
+
+        }, 4000);
+
+    });
+
+
+    // Validación básica
+    const formularios =
+        document.querySelectorAll("form");
+
+    formularios.forEach(function (formulario) {
+
+        formulario.addEventListener(
+            "submit",
+            function () {
+
+                const campos =
+                    formulario.querySelectorAll(
+                        "input[required], textarea[required], select[required]"
+                    );
+
+                campos.forEach(function (campo) {
+
+                    if (campo.value.trim() === "") {
+
+                        campo.classList.add(
+                            "is-invalid"
+                        );
+
+                    } else {
+
+                        campo.classList.remove(
+                            "is-invalid"
+                        );
+
+                        campo.classList.add(
+                            "is-valid"
+                        );
+
+                    }
+
+                });
+
+            }
+        );
+
+    });
+
+
+    // Validación mientras escribe
+    const campos =
+        document.querySelectorAll(
+            "input[required], textarea[required], select[required]"
+        );
+
+    campos.forEach(function (campo) {
+
+        campo.addEventListener(
+            "input",
+            function () {
+
+                if (campo.value.trim() !== "") {
+
+                    campo.classList.remove(
+                        "is-invalid"
+                    );
+
+                    campo.classList.add(
+                        "is-valid"
+                    );
+
+                } else {
+
+                    campo.classList.remove(
+                        "is-valid"
+                    );
+
+                    campo.classList.add(
+                        "is-invalid"
+                    );
+
+                }
+
+            }
+        );
+
+    });
+
+});
